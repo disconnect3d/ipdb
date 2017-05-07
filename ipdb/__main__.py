@@ -94,7 +94,35 @@ def set_trace(frame=None, context=3):
     wrap_sys_excepthook()
     if frame is None:
         frame = sys._getframe().f_back
-    p = _init_pdb(context).set_trace(frame)
+
+    # TerminalPdb object
+    p = _init_pdb(context)
+
+    def hook(func):
+        import functools
+        @functools.wraps(func)
+        def _decorate(*a, **kw):
+            print('Running: {}(args={}, kwargs={})'.format(func.__name__, a, kw))
+            return func(*a, **kw)
+        return _decorate
+
+    print("Hooking stuff")
+    for attrname in dir(p):
+
+        # skipping parser as functools.wraps doesn't work on that
+        # (it doesn't have .__name__ which is used by .wraps ...)
+        if attrname in ('parser',):
+            continue
+
+        attr = getattr(p, attrname)
+        print('Hooking:', attrname, attr)
+
+        if callable(attr):
+            print("Hooked p.%s" % attrname)
+            setattr(p, attrname, hook(attr))
+
+    p.set_trace(frame)
+
     if p and hasattr(p, 'shell'):
         p.shell.restore_sys_module_state()
 
