@@ -102,11 +102,21 @@ def set_trace(frame=None, context=3):
         import functools
         @functools.wraps(func)
         def _decorate(*a, **kw):
-            print('Running: {}(args={}, kwargs={})'.format(func.__name__, a, kw))
+            if func.__name__ == 'default' and len(a) >= 1 and a[0].startswith('%'):
+                args = a[0].split()
+
+                magic, args = args[0], args[1:]
+                magic = magic.lstrip('%')
+
+                print('!!! Launching magic: {}({})'.format(magic, args))
+                r = p.shell.find_line_magic(magic)(*args)
+                print('!!! Magic returned: {}'.format(r))
+                return ''
+            #print('~~~ Running: {}(args={}, kwargs={})'.format(func.__name__, a, kw))
             return func(*a, **kw)
         return _decorate
 
-    print("Hooking stuff")
+    #print("Hooking stuff")
     for attrname in dir(p):
 
         # skipping parser as functools.wraps doesn't work on that
@@ -115,11 +125,12 @@ def set_trace(frame=None, context=3):
             continue
 
         attr = getattr(p, attrname)
-        print('Hooking:', attrname, attr)
+        #print('Hooking:', attrname, attr)
 
         if callable(attr):
-            print("Hooked p.%s" % attrname)
-            setattr(p, attrname, hook(attr))
+            #print("Hooked p.%s" % attrname)
+            #setattr(p, attrname, hook(attr))
+            pass
 
     p.set_trace(frame)
 
